@@ -9,14 +9,32 @@ st.set_page_config(page_title="投稿数ダッシュボード", layout="wide")
 
 # @st.cache_data をつけると、毎回CSVを読み込み直さずキャッシュを利用するため動作が高速になります
 @st.cache_data
+@st.cache_data
 def load_data():
-    FILE_PATH = 'dataset_0914/dataset_0914.csv'
+    FILE_PATH = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'dataset_0914',
+        'dataset_0914.csv'
+    )
+    
     DATE_COLUMN = '投稿日時'
 
-    if not os.path.exists(FILE_PATH):
+    # ファイルが存在するか確認
+    if not os.path.isfile(FILE_PATH):
+        st.error(f"CSVファイルが見つかりません: {FILE_PATH}")
         return pd.DataFrame()
 
-    df = pd.read_csv(FILE_PATH, encoding='utf-8')
+    try:
+        df = pd.read_csv(FILE_PATH, encoding='utf-8')
+    except pd.errors.EmptyDataError:
+        st.error("CSVファイルは存在しますが、中身が空です。")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"CSVの読み込みに失敗しました: {e}")
+        return pd.DataFrame()
+
+    if df.empty:
+        return pd.DataFrame()
 
     df[DATE_COLUMN] = pd.to_datetime(
         df[DATE_COLUMN],
@@ -55,7 +73,6 @@ def main():
     df = load_data()
 
     if df.empty:
-        st.error(f"指定されたディレクトリ（dataset_0914）にCSVファイルが見つかりません。")
         return
 
     # 全期間の最小・最大日付を取得
