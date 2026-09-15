@@ -61,10 +61,10 @@ def main():
     # データ読み込み
     df = load_data()
 
-    if df.empty:
+    if len(df.index) == 0:
         st.error("データが読み込めませんでした。")
         return
-
+        
     # 全期間の最小・最大日付
     min_date = df.index.min().date()
     max_date = df.index.max().date()
