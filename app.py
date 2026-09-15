@@ -18,17 +18,39 @@ def load_data():
 
     DATE_COLUMN = '投稿日時'
 
+    # ファイルが存在するか確認
     if not os.path.isfile(FILE_PATH):
+        st.error(f"CSVファイルが見つかりません: {FILE_PATH}")
         return pd.DataFrame()
 
     # CSV読み込み
-    df = pd.read_csv(FILE_PATH, encoding='utf-8')
+    try:
+        df = pd.read_csv(FILE_PATH, encoding='utf-8')
+    except Exception as e:
+        st.error(f"CSV読み込みエラー: {e}")
+        return pd.DataFrame()
 
-    # 日時型へ変換
+    # 読み込み確認
+    st.write(f"CSV読み込み件数: {len(df):,}件")
+    st.write("列名:", df.columns.tolist())
+    st.write("投稿日時の例:", df[DATE_COLUMN].head().tolist())
+
+    # 日時変換前の値を保存
+    original_count = len(df)
+
     df[DATE_COLUMN] = pd.to_datetime(
         df[DATE_COLUMN],
         errors='coerce'
     )
+
+    # 日時変換できた件数
+    valid_count = df[DATE_COLUMN].notna().sum()
+
+    st.write(f"日時変換成功: {valid_count:,}件 / {original_count:,}件")
+
+    if valid_count == 0:
+        st.error("投稿日時を日時データとして読み込めませんでした。")
+        return pd.DataFrame()
 
     # 変換失敗を除外
     df = df.dropna(subset=[DATE_COLUMN])
