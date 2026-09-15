@@ -29,14 +29,14 @@ def load_data():
         st.error(f"CSV読み込みエラー: {e}")
         return pd.DataFrame()
 
-    st.write("読み込み直後:", df.shape)
+    # st.write("読み込み直後:", df.shape)
 
     df[DATE_COLUMN] = pd.to_datetime(
         df[DATE_COLUMN],
         errors="coerce"
     )
 
-    st.write(
+    # st.write(
         "日時変換後:",
         df[DATE_COLUMN].notna().sum(),
         "件"
@@ -44,14 +44,14 @@ def load_data():
 
     df = df.dropna(subset=[DATE_COLUMN])
 
-    st.write("dropna後:", df.shape)
+    # st.write("dropna後:", df.shape)
 
     df.set_index(DATE_COLUMN, inplace=True)
     df.sort_index(inplace=True)
 
-    st.write("最終データ:", df.shape)
-    st.write("最小日時:", df.index.min())
-    st.write("最大日時:", df.index.max())
+    # st.write("最終データ:", df.shape)
+    # st.write("最小日時:", df.index.min())
+    # st.write("最大日時:", df.index.max())
 
     return df
 def main():
