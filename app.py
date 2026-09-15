@@ -9,10 +9,35 @@ st.set_page_config(page_title="投稿数ダッシュボード", layout="wide")
 
 # @st.cache_data をつけると、毎回CSVを読み込み直さずキャッシュを利用するため動作が高速になります
 @st.cache_data
+@st.cache_data
 def load_data():
-    TARGET_DIR = 'dataset_0914.csv'
-    DATE_COLUMN = '投稿日時'  # 実際の列名に合わせてください
+    TARGET_DIR = 'dataset_0914'
+    DATE_COLUMN = '投稿日時'
     FILE_PATTERN = '*.csv'
+
+    files = glob.glob(os.path.join(TARGET_DIR, FILE_PATTERN))
+
+    if not files:
+        return pd.DataFrame()
+
+    df_list = []
+    for file in files:
+        df = pd.read_csv(file, encoding='utf-8')
+        df_list.append(df)
+
+    all_data = pd.concat(df_list, ignore_index=True)
+
+    all_data[DATE_COLUMN] = pd.to_datetime(
+        all_data[DATE_COLUMN],
+        errors='coerce'
+    )
+
+    valid_data = all_data.dropna(subset=[DATE_COLUMN]).copy()
+
+    valid_data.set_index(DATE_COLUMN, inplace=True)
+    valid_data.sort_index(inplace=True)
+
+    return valid_data
 
     files = glob.glob(os.path.join(TARGET_DIR))
     if not files:
