@@ -9,7 +9,6 @@ st.set_page_config(page_title="投稿数ダッシュボード", layout="wide")
 
 # @st.cache_data をつけると、毎回CSVを読み込み直さずキャッシュを利用するため動作が高速になります
 @st.cache_data
-@st.cache_data
 def load_data():
     FILE_PATH = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -17,40 +16,30 @@ def load_data():
         'dataset_0914.csv'
     )
 
-    st.write("CSVパス:", FILE_PATH)
-    st.write("ファイル存在:", os.path.isfile(FILE_PATH))
+    DATE_COLUMN = '投稿日時'
 
-    # ファイルサイズ
-    file_size = os.path.getsize(FILE_PATH)
-    st.write("ファイルサイズ:", file_size, "bytes")
-
-    # CSVを直接読み込む
-    df = pd.read_csv(FILE_PATH, encoding='utf-8')
-
-    st.write("DataFrameのshape:", df.shape)
-    st.write("列名:", df.columns.tolist())
-    st.write("先頭5行:")
-    st.dataframe(df.head())
-
-    return df
-    files = glob.glob(os.path.join(TARGET_DIR))
-    if not files:
+    if not os.path.isfile(FILE_PATH):
         return pd.DataFrame()
 
-    df_list = []
-    for file in files:
-        df = pd.read_csv(file, encoding='utf-8')
-        df_list.append(df)
+    # CSV読み込み
+    df = pd.read_csv(FILE_PATH, encoding='utf-8')
 
-    all_data = pd.concat(df_list, ignore_index=True)
-    all_data[DATE_COLUMN] = pd.to_datetime(all_data[DATE_COLUMN], errors='coerce')
-    valid_data = all_data.dropna(subset=[DATE_COLUMN]).copy()
+    # 日時型へ変換
+    df[DATE_COLUMN] = pd.to_datetime(
+        df[DATE_COLUMN],
+        errors='coerce'
+    )
 
-    # 日時をインデックスに設定して並び替え
-    valid_data.set_index(DATE_COLUMN, inplace=True)
-    valid_data.sort_index(inplace=True)
-    return valid_data
+    # 変換失敗を除外
+    df = df.dropna(subset=[DATE_COLUMN])
 
+    # インデックス化
+    df.set_index(DATE_COLUMN, inplace=True)
+
+    # 並び替え
+    df.sort_index(inplace=True)
+
+    return df
 def main():
     st.title("データセット投稿数ダッシュボード")
 
