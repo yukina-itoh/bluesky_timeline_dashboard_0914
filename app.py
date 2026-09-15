@@ -10,7 +10,6 @@ st.set_page_config(
 )
 
 
-@st.cache_data
 def load_data():
     FILE_PATH = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -20,37 +19,41 @@ def load_data():
 
     DATE_COLUMN = "投稿日時"
 
-    # CSVが存在するか確認
     if not os.path.isfile(FILE_PATH):
         st.error(f"CSVファイルが見つかりません: {FILE_PATH}")
         return pd.DataFrame()
 
-    # CSV読み込み
-    df = pd.read_csv(
-        FILE_PATH,
-        encoding="utf-8"
-    )
+    try:
+        df = pd.read_csv(FILE_PATH, encoding="utf-8")
+    except Exception as e:
+        st.error(f"CSV読み込みエラー: {e}")
+        return pd.DataFrame()
 
-    # 「投稿日時」を日時型に変換
+    st.write("読み込み直後:", df.shape)
+
     df[DATE_COLUMN] = pd.to_datetime(
         df[DATE_COLUMN],
         errors="coerce"
     )
 
-    # 日時変換できなかった行を削除
-    df = df.dropna(
-        subset=[DATE_COLUMN]
+    st.write(
+        "日時変換後:",
+        df[DATE_COLUMN].notna().sum(),
+        "件"
     )
 
-    # 投稿日時をインデックスに設定
-    df = df.set_index(DATE_COLUMN)
+    df = df.dropna(subset=[DATE_COLUMN])
 
-    # 日時順に並べ替え
-    df = df.sort_index()
+    st.write("dropna後:", df.shape)
+
+    df.set_index(DATE_COLUMN, inplace=True)
+    df.sort_index(inplace=True)
+
+    st.write("最終データ:", df.shape)
+    st.write("最小日時:", df.index.min())
+    st.write("最大日時:", df.index.max())
 
     return df
-
-
 def main():
 
     st.title("データセット投稿数ダッシュボード")
