@@ -10,16 +10,17 @@ st.set_page_config(page_title="投稿数ダッシュボード", layout="wide")
 # @st.cache_data をつけると、毎回CSVを読み込み直さずキャッシュを利用するため動作が高速になります
 @st.cache_data
 @st.cache_data
+@st.cache_data
 def load_data():
     FILE_PATH = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         'dataset_0914',
         'dataset_0914.csv'
     )
-    
+
     DATE_COLUMN = '投稿日時'
 
-    # ファイルが存在するか確認
+    # ファイル確認
     if not os.path.isfile(FILE_PATH):
         st.error(f"CSVファイルが見つかりません: {FILE_PATH}")
         return pd.DataFrame()
@@ -33,21 +34,37 @@ def load_data():
         st.error(f"CSVの読み込みに失敗しました: {e}")
         return pd.DataFrame()
 
+    # ★ デバッグ用
+    st.write("CSV読み込み成功")
+    st.write("行数:", len(df))
+    st.write("列名:", df.columns.tolist())
+    st.write("投稿日時の例:", df[DATE_COLUMN].head())
+
     if df.empty:
+        st.error("CSVの中身が空です。")
         return pd.DataFrame()
 
+    # 日時変換
     df[DATE_COLUMN] = pd.to_datetime(
         df[DATE_COLUMN],
         errors='coerce'
     )
 
+    # ★ デバッグ用
+    st.write("日時変換後の有効データ数:", df[DATE_COLUMN].notna().sum())
+
     valid_data = df.dropna(subset=[DATE_COLUMN]).copy()
+
+    if valid_data.empty:
+        st.error(
+            f"「{DATE_COLUMN}」を日時として読み込めるデータがありません。"
+        )
+        return pd.DataFrame()
 
     valid_data.set_index(DATE_COLUMN, inplace=True)
     valid_data.sort_index(inplace=True)
 
     return valid_data
-
     files = glob.glob(os.path.join(TARGET_DIR))
     if not files:
         return pd.DataFrame()
