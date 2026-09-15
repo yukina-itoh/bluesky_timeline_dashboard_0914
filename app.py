@@ -10,7 +10,6 @@ st.set_page_config(page_title="投稿数ダッシュボード", layout="wide")
 # @st.cache_data をつけると、毎回CSVを読み込み直さずキャッシュを利用するため動作が高速になります
 @st.cache_data
 @st.cache_data
-@st.cache_data
 def load_data():
     FILE_PATH = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -18,53 +17,22 @@ def load_data():
         'dataset_0914.csv'
     )
 
-    DATE_COLUMN = '投稿日時'
+    st.write("CSVパス:", FILE_PATH)
+    st.write("ファイル存在:", os.path.isfile(FILE_PATH))
 
-    # ファイル確認
-    if not os.path.isfile(FILE_PATH):
-        st.error(f"CSVファイルが見つかりません: {FILE_PATH}")
-        return pd.DataFrame()
+    # ファイルサイズ
+    file_size = os.path.getsize(FILE_PATH)
+    st.write("ファイルサイズ:", file_size, "bytes")
 
-    try:
-        df = pd.read_csv(FILE_PATH, encoding='utf-8')
-    except pd.errors.EmptyDataError:
-        st.error("CSVファイルは存在しますが、中身が空です。")
-        return pd.DataFrame()
-    except Exception as e:
-        st.error(f"CSVの読み込みに失敗しました: {e}")
-        return pd.DataFrame()
+    # CSVを直接読み込む
+    df = pd.read_csv(FILE_PATH, encoding='utf-8')
 
-    # ★ デバッグ用
-    st.write("CSV読み込み成功")
-    st.write("行数:", len(df))
+    st.write("DataFrameのshape:", df.shape)
     st.write("列名:", df.columns.tolist())
-    st.write("投稿日時の例:", df[DATE_COLUMN].head())
+    st.write("先頭5行:")
+    st.dataframe(df.head())
 
-    if df.empty:
-        st.error("CSVの中身が空です。")
-        return pd.DataFrame()
-
-    # 日時変換
-    df[DATE_COLUMN] = pd.to_datetime(
-        df[DATE_COLUMN],
-        errors='coerce'
-    )
-
-    # ★ デバッグ用
-    st.write("日時変換後の有効データ数:", df[DATE_COLUMN].notna().sum())
-
-    valid_data = df.dropna(subset=[DATE_COLUMN]).copy()
-
-    if valid_data.empty:
-        st.error(
-            f"「{DATE_COLUMN}」を日時として読み込めるデータがありません。"
-        )
-        return pd.DataFrame()
-
-    valid_data.set_index(DATE_COLUMN, inplace=True)
-    valid_data.sort_index(inplace=True)
-
-    return valid_data
+    return df
     files = glob.glob(os.path.join(TARGET_DIR))
     if not files:
         return pd.DataFrame()
