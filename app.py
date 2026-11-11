@@ -139,6 +139,24 @@ def main():
             "サイドバーから最新CSVをアップロードすると、2系列の比較が表示されます。"
         )
 
+    # 以前のダッシュボードにあった最大値・最小値・平均値を復元。
+    # 選択中の集計単位と表示期間で求め、前処理後があれば両方表示する。
+    st.subheader(f"📊 {selected_freq}の統計（{start_date} 〜 {end_date}）")
+
+    def show_summary(label, counts):
+        st.markdown(f"**{label}**")
+        maximum = int(counts.max()) if not counts.empty else 0
+        minimum = int(counts.min()) if not counts.empty else 0
+        average = float(counts.mean()) if not counts.empty else 0.0
+        col1, col2, col3 = st.columns(3)
+        col1.metric("最大投稿数", f"{maximum:,} 件")
+        col2.metric("最小投稿数", f"{minimum:,} 件")
+        col3.metric("平均投稿数", f"{average:,.1f} 件")
+
+    show_summary("前処理前", raw_counts)
+    if clean_daily is not None:
+        show_summary("前処理後", clean_counts)
+
     st.caption(f"前処理前: {raw_source}")
     if clean_source is not None:
         st.caption(f"前処理後: {clean_source}")
