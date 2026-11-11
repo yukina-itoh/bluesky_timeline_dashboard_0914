@@ -9,6 +9,7 @@ st.set_page_config(page_title="Bluesky投稿数ダッシュボード", layout="w
 
 BASE_DIR = Path(__file__).resolve().parent
 RAW_CSV = BASE_DIR / "dataset_0914" / "dataset_0914.csv"
+RAW_SUMMARY_CSV = BASE_DIR / "raw_daily_counts.csv"
 PROCESSED_SUMMARY_CSV = BASE_DIR / "processed_daily_counts.csv"
 DATE_COLUMN = "投稿日時"
 
@@ -68,7 +69,8 @@ def main():
     )
 
     try:
-        raw_data, raw_source = read_dataset(raw_upload, RAW_CSV)
+        raw_default = RAW_SUMMARY_CSV if RAW_SUMMARY_CSV.is_file() else RAW_CSV
+        raw_data, raw_source = read_dataset(raw_upload, raw_default)
         clean_data, clean_source = read_dataset(clean_upload, PROCESSED_SUMMARY_CSV)
     except Exception as exc:
         st.error(f"CSVの読み込みに失敗しました: {exc}")
