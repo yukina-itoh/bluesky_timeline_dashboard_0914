@@ -8,7 +8,6 @@ import streamlit as st
 st.set_page_config(page_title="Bluesky投稿数ダッシュボード", layout="wide")
 
 BASE_DIR = Path(__file__).resolve().parent
-RAW_CSV = BASE_DIR / "dataset_0914" / "dataset_0914.csv"
 RAW_SUMMARY_CSV = BASE_DIR / "raw_daily_counts.csv"
 PROCESSED_SUMMARY_CSV = BASE_DIR / "processed_daily_counts.csv"
 DATE_COLUMN = "投稿日時"
@@ -19,12 +18,12 @@ def daily_counts_from_csv(data: bytes):
     df = pd.read_csv(io.BytesIO(data), encoding="utf-8-sig", low_memory=False)
 
     if DATE_COLUMN in df.columns:
-        dates = pd.to_datetime(df[DATE_COLUMN], errors="coerce")
+        dates = pd.to_datetime(df[DATE_COLUMN], errors="coerce", format="mixed")
         valid_dates = dates.dropna()
         daily = valid_dates.dt.normalize().value_counts().sort_index().astype("int64")
         invalid = len(df) - len(valid_dates)
     elif {"date", "投稿数"}.issubset(df.columns):
-        dates = pd.to_datetime(df["date"], errors="coerce")
+        dates = pd.to_datetime(df["date"], errors="coerce", format="mixed")
         counts = pd.to_numeric(df["投稿数"], errors="coerce")
         valid = dates.notna() & counts.notna() & (counts >= 0) & (counts % 1 == 0)
         if not valid.all():
@@ -51,15 +50,15 @@ def read_dataset(uploaded, default_path=None):
 
 def main():
     st.title("📊 Bluesky 投稿数ダッシュボード")
-    st.caption("2025年大阪・関西万博に関する投稿の、前処理前・前処理後の件数を比較")
+    st.caption("2025年大阪・関西万博に関するBluesky投稿の比較（GitHub保存の10月31日版CSVを初期表示）")
 
     st.sidebar.header("データの指定")
     raw_upload = st.sidebar.file_uploader(
-        "前処理前CSV（任意・未指定なら従来の dataset_0914.csv）",
+        "前処理前CSV（未指定ならGitHubの raw_daily_counts.csv）",
         type="csv", key="raw"
     )
     clean_upload = st.sidebar.file_uploader(
-        "最新の前処理後CSV（投稿単位CSVまたは日別集計CSV）",
+        "前処理後CSV（未指定ならGitHubの processed_daily_counts.csv）",
         type="csv", key="clean"
     )
     st.sidebar.caption(
@@ -69,15 +68,14 @@ def main():
     )
 
     try:
-        raw_default = RAW_SUMMARY_CSV if RAW_SUMMARY_CSV.is_file() else RAW_CSV
-        raw_data, raw_source = read_dataset(raw_upload, raw_default)
+        raw_data, raw_source = read_dataset(raw_upload, RAW_SUMMARY_CSV)
         clean_data, clean_source = read_dataset(clean_upload, PROCESSED_SUMMARY_CSV)
     except Exception as exc:
         st.error(f"CSVの読み込みに失敗しました: {exc}")
         return
 
     if raw_data is None:
-        st.error("前処理前CSVがありません。サイドバーからアップロードしてください。")
+        st.error("前処理前の raw_daily_counts.csv が見つかりません。GitHubに保存するか、サイドバーからアップロードしてください。")
         return
 
     raw_daily, raw_total, raw_invalid = raw_data
@@ -88,6 +86,16 @@ def main():
     else:
         clean_daily, clean_total, clean_invalid = None, None, 0
         min_date, max_date = raw_daily.index.min().date(), raw_daily.index.max().date()
+
+    if raw_upload is None and clean_upload is None and clean_data is not None:
+        st.success("GitHubに保存された前処理前・前処理後のCSVを読み込んでいます。")
+
+    with st.expander("読み込みデータの確認"):
+        st.write(f"前処理前：{raw_source} ／ {raw_total:,}件"
+                 f"（{raw_daily.index.min().date()}〜{raw_daily.index.max().date()}）")
+        if clean_data is not None:
+            st.write(f"前処理後：{clean_source} ／ {clean_total:,}件"
+                     f"（{clean_daily.index.min().date()}〜{clean_daily.index.max().date()}）")
 
     st.sidebar.header("表示設定")
     freq_options = {"日別": "D", "週別": "W-MON", "月別": "MS"}
@@ -118,6 +126,10 @@ def main():
         c2.metric("前処理後", f"{clean_period_total:,} 件")
         c3.metric("減少件数", f"{delta:,} 件")
         c4.metric("保持率", f"{rate:.1f}%")
+
+        if (clean_period > raw_period).any():
+            st.warning("一部の日で前処理後の投稿数が前処理前を上回っています。"
+                       "元データ・日付基準・集計方法が一致するか確認してください。")
 
         if clean_period_total > raw_period_total:
             st.warning(
